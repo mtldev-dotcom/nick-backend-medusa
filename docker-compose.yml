@@ -1,0 +1,60 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: medusa
+      POSTGRES_PASSWORD: medusapass
+      POSTGRES_DB: medusa-db
+    ports:
+      - "15432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - "16379:6379"
+    volumes:
+      - redis_data:/data
+
+  medusa-server:
+    build: .
+    restart: always
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://medusa:medusapass@postgres:5432/medusa-db
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: supersecret
+      COOKIE_SECRET: supersecret
+      STORE_CORS: http://localhost:18000
+      ADMIN_CORS: http://localhost:15173,http://localhost:19000
+      AUTH_CORS: http://localhost:15173,http://localhost:19000
+      MEDUSA_WORKER_MODE: server
+      DISABLE_MEDUSA_ADMIN: "false"
+    ports:
+      - "19000:9000"
+    depends_on:
+      - postgres
+      - redis
+    command: yarn start
+
+  medusa-worker:
+    build: .
+    restart: always
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://medusa:medusapass@postgres:5432/medusa-db
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: supersecret
+      COOKIE_SECRET: supersecret
+      MEDUSA_WORKER_MODE: worker
+      DISABLE_MEDUSA_ADMIN: "true"
+    depends_on:
+      - postgres
+      - redis
+    command: yarn start
+
+volumes:
+  postgres_data:
+  redis_data:
