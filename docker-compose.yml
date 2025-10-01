@@ -1,0 +1,87 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: medusa
+      POSTGRES_PASSWORD: change-me
+      POSTGRES_DB: medusa_db
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medusa -d medusa_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [dokploy-network]
+
+  redis:
+    image: redis:7
+    command: ["redis-server", "--save", "20", "1", "--loglevel", "warning"]
+    volumes:
+      - redis_data:/data
+    networks: [dokploy-network]
+
+  medusa-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://medusa:change-me@postgres:5432/medusa_db
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      COOKIE_SECRET: ${COOKIE_SECRET}
+      STORE_CORS: https://your-storefront.example.com
+      ADMIN_CORS: https://admin.example.com,https://api.example.com
+      AUTH_CORS: https://admin.example.com,https://api.example.com
+      MEDUSA_WORKER_MODE: server
+      DISABLE_MEDUSA_ADMIN: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    # Direct host access for testing: http://<server-ip>:9001
+    ports:
+      - "9001:9000" # host 9001 → container 9000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.medusa.rule=Host(`api.example.com`)"
+      - "traefik.http.routers.medusa.entrypoints=websecure"
+      - "traefik.http.routers.medusa.tls.certresolver=letsencrypt"
+      - "traefik.http.services.medusa.loadbalancer.server.port=9000"
+      - "traefik.docker.network=dokploy-network"
+    command: sh -c "yarn medusa db:migrate && yarn start"
+    networks: [dokploy-network]
+
+  medusa-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://medusa:change-me@postgres:5432/medusa_db
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      COOKIE_SECRET: ${COOKIE_SECRET}
+      MEDUSA_WORKER_MODE: worker
+      DISABLE_MEDUSA_ADMIN: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: yarn start
+    networks: [dokploy-network]
+
+volumes:
+  pg_data:
+  redis_data:
+
+networks:
+  dokploy-network:
+    external: true

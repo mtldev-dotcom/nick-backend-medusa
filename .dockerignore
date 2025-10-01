@@ -1,0 +1,17 @@
+.git
+node_modules
+dist
+coverage
+.env*
+*.log
+Dockerfile
+docker-compose*.yml
+
+# Yarn Berry (keep plugins/releases, ignore cache)
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
