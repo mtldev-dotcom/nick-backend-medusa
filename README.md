@@ -320,3 +320,62 @@ volumes:
 - You may need to run migrations manually on first launch:  
   `docker-compose exec medusa-server yarn medusa db:migrate`
 - Adjust secrets and CORS origins for your environment.
+
+
+## Local Development: Docker Compose
+
+You can run the Medusa backend, PostgreSQL, and Redis locally with Docker Compose. This allows for easy setup and teardown, and ensures all dependencies are isolated.
+
+### 1. Prerequisites
+
+- Docker and Docker Compose installed
+- The `Dockerfile` and `docker-compose.yml` saved in your project root
+
+### 2. Start the Services
+
+From your project root, run:
+
+```bash
+docker-compose up --build
+```
+
+This will start:
+- **PostgreSQL** on port `15432`
+- **Redis** on port `16379`
+- **Medusa backend** (with hot reload) on port `19000`
+
+### 3. Run Database Migrations
+
+After the containers are running, run migrations:
+
+```bash
+docker-compose exec medusa yarn medusa db:migrate
+```
+
+### 4. (Optional) Seed the Database
+
+You can seed test data with:
+
+```bash
+docker-compose exec medusa yarn seed
+```
+
+### 5. Access the Backend
+
+- API and Admin: [http://localhost:19000](http://localhost:19000)
+- PostgreSQL: `localhost:15432`
+- Redis: `localhost:16379`
+
+### 6. Stopping the Services
+
+To stop and remove containers, run:
+
+```bash
+docker-compose down
+```
+
+### 7. Notes
+
+- All code changes you make locally are reflected in the running container (hot reload).
+- Environment variables and ports can be adjusted in `docker-compose.yml`.
+- For production, use a separate compose file or adjust settings.
